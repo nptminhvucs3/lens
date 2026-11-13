@@ -45,10 +45,13 @@ ctx.globalAlpha=alpha;ctx.drawImage(tl,p.x*W-d/2,p.y*H-d/2,d,d);ctx.restore();
 if(dbg){ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(p.x*W,p.y*H,3,0,7);ctx.fill()}})}catch(err){msg.textContent='Lỗi vẽ lens: '+err.message}
 ctx.restore()}
 function redraw(){if(lastSrc)render(lastSrc,lastRes,mode==='cam')}
-async function init(){try{msg.textContent='Đang tải công cụ nhận diện mắt…';const B='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';const mp=await import(B+'/vision_bundle.mjs');const fs=await mp.FilesetResolver.forVisionTasks(B+'/wasm');
-const M='https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+async function init(){const errs=[],M='https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+const BASES=['https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14','https://unpkg.com/@mediapipe/tasks-vision@0.10.14','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest'];
+msg.textContent='Đang tải công cụ nhận diện mắt…';
+for(const B of BASES){let st='tải thư viện';try{const mp=await import(B+'/vision_bundle.mjs');st='tải wasm';const fs=await mp.FilesetResolver.forVisionTasks(B+'/wasm');st='tải mô hình';
 const mk=d=>mp.FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:M,delegate:d},runningMode:'IMAGE',numFaces:1});
-try{lm=await mk('GPU')}catch(e){lm=await mk('CPU')}msg.textContent='Sẵn sàng. Mở camera hoặc tải ảnh lên.'}catch(e){msg.textContent='Không tải được công cụ nhận diện. Cần có internet và mở trang qua https.'}}
+try{lm=await mk('GPU')}catch(e){lm=await mk('CPU')}msg.textContent='Sẵn sàng. Mở camera hoặc tải ảnh lên.';return}catch(e){errs.push(B.split('/')[2]+' (bước '+st+'): '+((e&&e.message)||e))}}
+msg.textContent='Không tải được công cụ nhận diện. Chi tiết lỗi: '+errs.join(' | ')}
 function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('cam').textContent='Mở camera';mode='img'}
 function loop(){if(mode!=='cam'||!stream)return;if(vd.currentTime!==lt){lt=vd.currentTime;lastSrc=vd;lastRes=lm.detectForVideo(vd,performance.now());render(vd,lastRes,true)}requestAnimationFrame(loop)}
 $('cam').onclick=async()=>{if(stream){stopCam();return}if(!lm){msg.textContent='Công cụ nhận diện chưa sẵn sàng.';return}
