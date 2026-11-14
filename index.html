@@ -41,7 +41,7 @@ let a=Math.min(1,Math.max(d[i],d[i+1],d[i+2])/255*1.8);if(r>1)a=0;d[i]=R;d[i+1]=
 c.putImageData(im,0,0);const s=document.createElement('canvas');s.width=s.height=48;const sx=s.getContext('2d');sx.imageSmoothingQuality='high';sx.drawImage(o,0,0,48,48);
 const o2=document.createElement('canvas');o2.width=o2.height=256;const c2=o2.getContext('2d');c2.imageSmoothingQuality='high';c2.drawImage(s,0,0,256,256);
 const i2=c2.getImageData(0,0,256,256),e=i2.data;for(let i=0;i<e.length;i+=4){const x=(i/4)%256-128,y=Math.floor(i/4/256)-128,r=Math.hypot(x,y)/128;let a=Math.min(1,e[i+3]/255*3.5);if(r>.76)a*=Math.max(0,(1-r)/.24);const L=.3*e[i]+.59*e[i+1]+.11*e[i+2];for(let k=0;k<3;k++)e[i+k]=Math.min(255,(L+(e[i+k]-L)*1.05)*1.06);e[i+3]=a*255}
-c2.putImageData(i2,0,0);tl=o2;redraw()}
+c2.putImageData(i2,0,0);tl=o2;lensDirty=true;redraw()}
 const OV=[10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109],LIP=[61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185],BR=[[276,283,282,295,285,300,293,334,296,336],[46,53,52,65,55,70,63,105,66,107]];
 let bOn=true,bS=.3,bL=.3;const sm=document.createElement('canvas'),smx=sm.getContext('2d'),bl=document.createElement('canvas'),blx=bl.getContext('2d'),mk=document.createElement('canvas'),mkx=mk.getContext('2d');
 function beauty(s,f,W,H){const w=W>>1,h=H>>1;if(bl.width!==w||bl.height!==h){bl.width=w;bl.height=h;sm.width=Math.max(8,W/6|0);sm.height=Math.max(8,H/6|0);mk.width=Math.max(8,W/8|0);mk.height=Math.max(8,H/8|0)}
@@ -51,17 +51,48 @@ const poly=(a,sc)=>{mkx.beginPath();let cx=0,cy=0;a.forEach(i=>{cx+=f[i].x;cy+=f
 poly(OV,1);mkx.globalCompositeOperation='destination-out';EY.forEach(e=>poly(e.o,1.9));poly(LIP,1.25);BR.forEach(b=>poly(b,1.2));
 blx.globalCompositeOperation='destination-in';blx.drawImage(mk,0,0,w,h);
 ctx.globalAlpha=Math.min(.8,Math.max(bS*.8,bL*.45));ctx.drawImage(bl,0,0,W,H);ctx.globalCompositeOperation='lighten';ctx.globalAlpha=bL*.4;ctx.drawImage(bl,0,0,W,H);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=1}
+let gc=null,gl=null,glOK=false,lensDirty=true,GP=null;const em=document.createElement('canvas'),emx=em.getContext('2d');
+const VS=`#version 300 es
+in vec2 a;uniform vec2 uRes;uniform vec4 uBox;out vec2 vP;
+void main(){vec2 p=uBox.xy+a*uBox.zw;vP=p;gl_Position=vec4(p.x/uRes.x*2.-1.,1.-p.y/uRes.y*2.,0,1);}`;
+const FS=`#version 300 es
+precision highp float;in vec2 vP;out vec4 o;uniform sampler2D uV,uL,uM;uniform vec2 uRes,uC,uR;uniform vec4 uP;uniform float uA;
+void main(){vec2 q=(vP-uC)/uR;float r=length(q),R=r/uP.w;if(R>1.03){o=vec4(0);return;}
+vec2 uv=vP/uRes;vec3 b=texture(uV,uv).rgb;vec4 L=texture(uL,q/uP.w*.5+.5);float m=smoothstep(.15,.85,texture(uM,uv).a);
+float bl=dot(b,vec3(.299,.587,.114)),ll=max(dot(L.rgb,vec3(.299,.587,.114)),.04);
+vec3 cb=clamp(L.rgb*(bl+.12)/ll,0.,1.),sd=L.rgb*(.55+.6*bl),c=mix(sd,cb,uP.y);
+c*=1.-.25*smoothstep(.35,1.,R)+.1*(1.-smoothstep(0.,.6,R));c*=1.-uP.z*.7*smoothstep(.7,1.,R);
+float a=L.a*uP.x*uA*smoothstep(1.,.86,R)*smoothstep(.3,.46,r)*m;c=mix(c,b,smoothstep(.72,.92,bl)*.7);o=vec4(c*a,a);}`;
+function glInit(){try{if(!gc){gc=document.createElement('canvas');gc.addEventListener('webglcontextlost',e=>{e.preventDefault();glOK=false});gc.addEventListener('webglcontextrestored',()=>{glOK=glInit();lensDirty=true;redraw()})}
+gl=gc.getContext('webgl2',{premultipliedAlpha:true,alpha:true,antialias:false,powerPreference:'high-performance'});if(!gl)return false;
+const sh=(t,s)=>{const x=gl.createShader(t);gl.shaderSource(x,s);gl.compileShader(x);if(!gl.getShaderParameter(x,gl.COMPILE_STATUS))throw gl.getShaderInfoLog(x);return x};
+const pr=gl.createProgram();gl.attachShader(pr,sh(gl.VERTEX_SHADER,VS));gl.attachShader(pr,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(pr);if(!gl.getProgramParameter(pr,gl.LINK_STATUS))throw gl.getProgramInfoLog(pr);
+gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([0,0,1,0,0,1,1,1]),gl.STATIC_DRAW);const lc=gl.getAttribLocation(pr,'a');gl.enableVertexAttribArray(lc);gl.vertexAttribPointer(lc,2,gl.FLOAT,false,0,0);
+const T=()=>{const t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);[[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]].forEach(([k,v])=>gl.texParameteri(gl.TEXTURE_2D,k,v));return t};
+const l={};GP={pr,l,tex:[T(),T(),T()],u:n=>l[n]||(l[n]=gl.getUniformLocation(pr,n))};gl.useProgram(pr);['uV','uL','uM'].forEach((n,i)=>gl.uniform1i(GP.u(n),i));return true}catch(e){console.warn('WebGL2 lỗi',e);return false}}
+function glDraw(s,f,W,H,E2){if(gc.width!==W||gc.height!==H){gc.width=W;gc.height=H}
+const mw=Math.max(8,W>>2),mh=Math.max(8,H>>2);if(em.width!==mw)em.width=mw;if(em.height!==mh)em.height=mh;emx.clearRect(0,0,mw,mh);emx.fillStyle='#fff';
+E2.forEach(E=>{const p=EY[E.n].o.map(i=>({x:f[i].x*mw,y:f[i].y*mh}));let cx=0,cy=0;p.forEach(q=>{cx+=q.x;cy+=q.y});cx/=p.length;cy/=p.length;const q=p.map(v=>({x:cx+(v.x-cx)*1.04,y:cy+(v.y-cy)*1.04})),n=q.length,md=(a,b)=>[(a.x+b.x)/2,(a.y+b.y)/2];
+emx.beginPath();emx.moveTo(...md(q[n-1],q[0]));for(let i=0;i<n;i++){const m=md(q[i],q[(i+1)%n]);emx.quadraticCurveTo(q[i].x,q[i].y,m[0],m[1])}emx.closePath();emx.fill()});
+gl.viewport(0,0,W,H);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(GP.pr);
+const up=(i,src)=>{gl.activeTexture(gl.TEXTURE0+i);gl.bindTexture(gl.TEXTURE_2D,GP.tex[i]);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src)};
+up(0,s);if(lensDirty){up(1,tl);lensDirty=false}up(2,em);
+const g=1+(LP.gdia/11.7-1)*.35;gl.uniform2f(GP.u('uRes'),W,H);gl.uniform1f(GP.u('uA'),alpha);gl.uniform4f(GP.u('uP'),LP.cover,LP.tex,LP.limbal,g);
+E2.forEach(E=>{gl.uniform2f(GP.u('uC'),E.cx,E.cy);gl.uniform2f(GP.u('uR'),E.rx,E.ry);const bx=E.rx*g*1.15,by=E.ry*g*1.15;gl.uniform4f(GP.u('uBox'),E.cx-bx,E.cy-by,2*bx,2*by);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)});
+ctx.drawImage(gc,0,0,W,H);if(showDbg)E2.forEach(E=>{ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(E.cx,E.cy,3,0,7);ctx.fill()})}
+const DG={ms:0,fps:0,n:0,t:0,res:''};
 let showDbg=false,lastOK=null;
 function render(s,res,mirror){const W=cv.width,H=cv.height;ctx.save();ctx.clearRect(0,0,W,H);if(mirror){ctx.translate(W,0);ctx.scale(-1,1)}
 ctx.drawImage(s,0,0,W,H);const f=res&&res.faceLandmarks&&res.faceLandmarks[0];if(f&&bOn&&f.length>=468)try{beauty(s,f,W,H)}catch(x){bOn=false;msg.textContent='Lỗi làm đẹp: '+x.message}
 if(!!f!==lastOK){lastOK=!!f;msg.textContent=f?'Đã nhận diện được mắt ✓':'Chưa thấy khuôn mặt, hãy nhìn thẳng vào camera.'}
-try{if(f&&f.length<478)msg.textContent='Mô hình không trả về điểm mống mắt.';else if(f&&tl&&!noLens)EY.forEach((e,n)=>{
+const E2=[];try{if(f&&f.length<478)msg.textContent='Mô hình không trả về điểm mống mắt.';else if(f&&tl&&!noLens)EY.forEach((e,n)=>{
 const Q=i=>({x:f[i].x*W,y:f[i].y*H}),c=Q(e.c[0]),xs=[],ys=[];for(let k=1;k<5;k++){const q=Q(e.c[k]);xs.push(q.x);ys.push(q.y)}
 let rx=(Math.max(...xs)-Math.min(...xs))/2,ry=Math.max((Math.max(...ys)-Math.min(...ys))/2,rx*.75);
 const a=Q(e.k[0]),b=Q(e.k[1]),u=Q(e.v[0]),l=Q(e.v[1]),wd=Math.hypot(a.x-b.x,a.y-b.y)||1,open=Math.hypot(u.x-l.x,u.y-l.y)/wd,ex=(a.x+b.x)/2,ey=(a.y+b.y)/2,an=Math.atan2(b.y-a.y,b.x-a.x);
 let h=HS[n];if(open>.2||!h)h=HS[n]={ox:c.x-ex,oy:c.y-ey,rx,ry,sc:wd,an};
 const z=wd/h.sc,da=an-h.an,co=Math.cos(da),si=Math.sin(da),cx=ex+(h.ox*co-h.oy*si)*z,cy=ey+(h.ox*si+h.oy*co)*z;
 const g=1+(LP.gdia/11.7-1)*.35,Rx=h.rx*z*g,Ry=h.ry*z*g,A=alpha*LP.cover,t=LP.tex;
+if(glOK){E2.push({n,cx,cy,rx:h.rx*z,ry:h.ry*z});return}
 ctx.save();ctx.beginPath();e.o.forEach((m,i)=>{const q=f[m];i?ctx.lineTo(q.x*W,q.y*H):ctx.moveTo(q.x*W,q.y*H)});ctx.closePath();ctx.clip();ctx.translate(cx,cy);
 if(t>0){ctx.globalCompositeOperation='color';ctx.globalAlpha=Math.min(1,A*t*1.3);ctx.drawImage(tl,-Rx,-Ry,2*Rx,2*Ry)}
 ctx.globalCompositeOperation='source-over';ctx.globalAlpha=A*(1-t*.7);ctx.drawImage(tl,-Rx,-Ry,2*Rx,2*Ry);
@@ -69,8 +100,8 @@ if(LP.limbal>0){ctx.globalCompositeOperation='multiply';ctx.globalAlpha=1;ctx.sa
 const k=(s.videoWidth||s.width)/W;ctx.globalCompositeOperation='lighten';ctx.globalAlpha=.35;ctx.drawImage(s,(cx-Rx)*k,(cy-Ry)*k,2*Rx*k,2*Ry*k,-Rx,-Ry,2*Rx,2*Ry);
 const q=h.rx*z*.5;pcx.globalCompositeOperation='source-over';pcx.clearRect(0,0,64,64);pcx.drawImage(s,(cx-q)*k,(cy-q)*k,2*q*k,2*q*k,0,0,64,64);pcx.globalCompositeOperation='destination-in';const pg=pcx.createRadialGradient(32,32,16,32,32,32);pg.addColorStop(0,'#000');pg.addColorStop(1,'rgba(0,0,0,0)');pcx.fillStyle=pg;pcx.fillRect(0,0,64,64);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=.9;ctx.drawImage(pc,-q,-q,2*q,2*q);
 ctx.restore();
-if(showDbg){ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(cx,cy,3,0,7);ctx.fill()}})}catch(err){msg.textContent='Lỗi vẽ lens: '+err.message}
-ctx.restore()}
+if(showDbg){ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(cx,cy,3,0,7);ctx.fill()}});if(E2.length)glDraw(s,f,W,H,E2)}catch(err){msg.textContent='Lỗi vẽ lens: '+err.message}
+ctx.restore();if(showDbg){ctx.font=Math.round(W/38)+'px system-ui';ctx.fillStyle='#0f0';ctx.fillText(DG.res+' | '+DG.fps.toFixed(0)+' fps | tìm mắt '+DG.ms.toFixed(1)+' ms | '+(glOK?'WebGL2':'Canvas2D'),W/60,H/28)}}
 function redraw(){if(lastSrc)render(lastSrc,lastRes,mode==='cam')}
 async function init(){const errs=[],M='https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 const BASES=['https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14','https://unpkg.com/@mediapipe/tasks-vision@0.10.14','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest'];
@@ -82,9 +113,9 @@ msg.textContent='Không tải được công cụ nhận diện. Chi tiết lỗ
 function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('cam').textContent='Mở camera';mode='img'}
 const pc=document.createElement('canvas');pc.width=pc.height=64;const pcx=pc.getContext('2d');
 const dc=document.createElement('canvas'),dx=dc.getContext('2d');
-function loop(){if(mode!=='cam'||!stream)return;if(vd.currentTime!==lt){lt=vd.currentTime;lastSrc=vd;dx.drawImage(vd,0,0,dc.width,dc.height);const now=performance.now();lastRes=lm.detectForVideo(dc,now);if(lastRes.faceLandmarks.length){lastRes={faceLandmarks:[smooth(lastRes.faceLandmarks[0],now,cv.width,cv.height)]};good=lastRes;goodT=now}else if(good&&now-goodT<250)lastRes=good;render(vd,lastRes,true)}vd.requestVideoFrameCallback?vd.requestVideoFrameCallback(loop):requestAnimationFrame(loop)}
+function loop(){if(mode!=='cam'||!stream)return;if(vd.currentTime!==lt){lt=vd.currentTime;lastSrc=vd;dx.drawImage(vd,0,0,dc.width,dc.height);const now=performance.now();lastRes=lm.detectForVideo(dc,now);DG.ms=DG.ms*.9+(performance.now()-now)*.1;DG.n++;if(now-DG.t>1000){DG.fps=DG.n*1000/(now-DG.t);DG.n=0;DG.t=now}if(lastRes.faceLandmarks.length){lastRes={faceLandmarks:[smooth(lastRes.faceLandmarks[0],now,cv.width,cv.height)]};good=lastRes;goodT=now}else if(good&&now-goodT<250)lastRes=good;render(vd,lastRes,true)}vd.requestVideoFrameCallback?vd.requestVideoFrameCallback(loop):requestAnimationFrame(loop)}
 $('cam').onclick=async()=>{if(stream){stopCam();return}if(!lm){msg.textContent='Công cụ nhận diện chưa sẵn sàng.';return}
-msg.textContent='Đang khởi động camera…';try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:false});vd.srcObject=stream;await vd.play();await lm.setOptions({runningMode:'VIDEO'});
+msg.textContent='Đang khởi động camera…';try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:false});vd.srcObject=stream;await vd.play();{const ts=stream.getVideoTracks()[0].getSettings();DG.res=vd.videoWidth+'x'+vd.videoHeight+' (cảm biến '+ts.width+'x'+ts.height+')'}await lm.setOptions({runningMode:'VIDEO'});
 const k=Math.min(1,1920/Math.max(vd.videoWidth,vd.videoHeight));cv.width=Math.round(vd.videoWidth*k);cv.height=Math.round(vd.videoHeight*k);dc.width=640;dc.height=Math.round(640*vd.videoHeight/vd.videoWidth);mode='cam';$('cam').textContent='Tắt camera';msg.textContent='';loop()}catch(e){stopCam();msg.textContent='Không mở được camera (cần cho phép camera và chạy qua https).'}};
 $('fi').onchange=e=>{const f=e.target.files[0];if(!f)return;if(!lm){msg.textContent='Công cụ nhận diện chưa sẵn sàng.';return}stopCam();const im=new Image();
 im.onload=async()=>{const k=Math.min(1,1920/Math.max(im.width,im.height));cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);await lm.setOptions({runningMode:'IMAGE'});HS[0]=HS[1]=null;ST.clear();lastSrc=im;lastRes=lm.detect(im);
@@ -99,5 +130,5 @@ const lensBox=$('lenses');
 function addLens(l){const b=document.createElement('button');b.className='sw';b.style.cssText='width:56px;height:56px;background:#000 center/cover url('+l.s+')';b.title=l.n;b.onclick=()=>{[...lensBox.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');noLens=false;LP=l;src.src=l.s;redraw()};lensBox.appendChild(b);return b}
 $('lf').onchange=e=>{const f=e.target.files[0];if(f)addLens({n:f.name,gdia:14,cover:.8,tex:.5,limbal:.4,s:URL.createObjectURL(f)}).click()};
 $('showpts').onchange=e=>{showDbg=e.target.checked;redraw()};
-const nb=document.createElement('button');nb.className='sw';nb.style.cssText='width:56px;height:56px;font-size:11px;line-height:1.1';nb.textContent='Không lens';nb.onclick=()=>{[...lensBox.children].forEach(x=>x.classList.remove('on'));nb.classList.add('on');noLens=true;redraw()};lensBox.appendChild(nb);LENSES.forEach(addLens);lensBox.children[1].classList.add('on');src.onload=build;src.src=LENSES[0].s;init();
+const nb=document.createElement('button');nb.className='sw';nb.style.cssText='width:56px;height:56px;font-size:11px;line-height:1.1';nb.textContent='Không lens';nb.onclick=()=>{[...lensBox.children].forEach(x=>x.classList.remove('on'));nb.classList.add('on');noLens=true;redraw()};lensBox.appendChild(nb);glOK=glInit();LENSES.forEach(addLens);lensBox.children[1].classList.add('on');src.onload=build;src.src=LENSES[0].s;init();
 </script></body></html>
