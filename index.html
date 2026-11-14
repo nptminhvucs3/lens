@@ -4,15 +4,15 @@
 @media (prefers-color-scheme:dark){:root{--bg:#1c1918;--fg:#f1eae7;--mut:#a89d99;--card:#262221;--line:#3a3433}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .w{max-width:520px;margin:0 auto;padding:16px}h1{font-size:20px;margin:4px 0}p{margin:0 0 12px;color:var(--mut);font-size:13px}
-canvas{display:block;width:100%;border-radius:14px;border:1px solid var(--line)}
+#stage{position:relative;margin:0 auto;width:min(100%,calc(78vh*var(--ar,1.3333)));aspect-ratio:var(--ar,1.3333);border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#000}#stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}
 .row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;align-items:center}
 button,.btn{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);padding:9px 14px;border-radius:10px;cursor:pointer}
 .pri{background:var(--fg);color:var(--bg)}.on{outline:2px solid var(--fg)}.sw{width:34px;height:34px;padding:0;border-radius:50%}
-label{display:block;font-size:13px;color:var(--mut);margin-top:10px}input[type=range]{width:100%}#msg{font-size:13px;color:var(--mut);min-height:18px;margin-top:8px}
-video{position:absolute;opacity:0;width:2px;height:2px;pointer-events:none}
+label{display:block;font-size:13px;color:var(--mut);margin-top:10px}input[type=range]{width:100%}#msg{font-size:13px;color:var(--mut);min-height:40px;margin-top:8px}
+#stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;pointer-events:none}
 </style></head><body><div class="w">
 <h1>Thử lens ảo</h1><p>Mắt được nhận diện tự động. Mở camera hoặc tải ảnh chính diện rõ mắt.</p>
-<canvas id="cv" width="720" height="540"></canvas><video id="vd" playsinline muted></video>
+<div id="stage"><canvas id="cv" width="720" height="540"></canvas><video id="vd" playsinline muted></video></div>
 <div id="msg"></div>
 <div class="row"><button id="cam" class="pri">Mở camera</button><label class="btn" style="margin:0">Tải ảnh lên<input id="fi" type="file" accept="image/*" hidden></label></div>
 <label>Chọn mẫu lens</label><div class="row" id="lenses"></div><div class="row"><label class="btn" style="margin:0">Thêm lens của bạn (ảnh nền đen)<input id="lf" type="file" accept="image/*" hidden></label></div><label>Đổi màu mẫu đang chọn</label><div class="row" id="cols"></div>
@@ -80,7 +80,7 @@ up(0,s);if(lensDirty){up(1,tl);lensDirty=false}up(2,em);
 const g=1+(LP.gdia/11.7-1)*.35;gl.uniform2f(GP.u('uRes'),W,H);gl.uniform1f(GP.u('uA'),alpha);gl.uniform4f(GP.u('uP'),LP.cover,LP.tex,LP.limbal,g);
 E2.forEach(E=>{gl.uniform2f(GP.u('uC'),E.cx,E.cy);gl.uniform2f(GP.u('uR'),E.rx,E.ry);const bx=E.rx*g*1.15,by=E.ry*g*1.15;gl.uniform4f(GP.u('uBox'),E.cx-bx,E.cy-by,2*bx,2*by);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)});
 ctx.drawImage(gc,0,0,W,H);if(showDbg)E2.forEach(E=>{ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(E.cx,E.cy,3,0,7);ctx.fill()})}
-const DG={ms:0,fps:0,n:0,t:0,res:''};
+const DG={ms:0,fps:0,n:0,t:0,res:'',cn:0,ct:0,cfps:0,rn:0,rt:0,rfps:0};
 let showDbg=false,lastOK=null;
 function render(s,res,mirror){const W=cv.width,H=cv.height;ctx.save();ctx.clearRect(0,0,W,H);if(mirror){ctx.translate(W,0);ctx.scale(-1,1)}
 ctx.drawImage(s,0,0,W,H);const f=res&&res.faceLandmarks&&res.faceLandmarks[0];if(f&&bOn&&f.length>=468)try{beauty(s,f,W,H)}catch(x){bOn=false;msg.textContent='Lỗi làm đẹp: '+x.message}
@@ -101,7 +101,8 @@ const k=(s.videoWidth||s.width)/W;ctx.globalCompositeOperation='lighten';ctx.glo
 const q=h.rx*z*.5;pcx.globalCompositeOperation='source-over';pcx.clearRect(0,0,64,64);pcx.drawImage(s,(cx-q)*k,(cy-q)*k,2*q*k,2*q*k,0,0,64,64);pcx.globalCompositeOperation='destination-in';const pg=pcx.createRadialGradient(32,32,16,32,32,32);pg.addColorStop(0,'#000');pg.addColorStop(1,'rgba(0,0,0,0)');pcx.fillStyle=pg;pcx.fillRect(0,0,64,64);ctx.globalCompositeOperation='source-over';ctx.globalAlpha=.9;ctx.drawImage(pc,-q,-q,2*q,2*q);
 ctx.restore();
 if(showDbg){ctx.fillStyle='#0f0';ctx.beginPath();ctx.arc(cx,cy,3,0,7);ctx.fill()}});if(E2.length)glDraw(s,f,W,H,E2)}catch(err){msg.textContent='Lỗi vẽ lens: '+err.message}
-ctx.restore();if(showDbg){ctx.font=Math.round(W/38)+'px system-ui';ctx.fillStyle='#0f0';ctx.fillText(DG.res+' | '+DG.fps.toFixed(0)+' fps | tìm mắt '+DG.ms.toFixed(1)+' ms | '+(glOK?'WebGL2':'Canvas2D'),W/60,H/28)}}
+ctx.restore();{const tn=performance.now();DG.rn++;if(tn-DG.rt>1000){DG.rfps=DG.rn*1000/(tn-DG.rt);DG.rn=0;DG.rt=tn}}
+if(showDbg){const r=cv.getBoundingClientRect(),tr=stream&&stream.getVideoTracks()[0],T=['video '+vd.videoWidth+'x'+vd.videoHeight+' | canvas '+W+'x'+H,'khung '+r.width.toFixed(0)+'x'+r.height.toFixed(0)+' css px | dpr '+devicePixelRatio,'camera '+DG.cfps.toFixed(0)+' fps | vẽ '+DG.rfps.toFixed(0)+' fps | tìm mắt '+DG.ms.toFixed(1)+' ms','vòng lặp '+live.size+' | stream '+(tr?tr.readyState:'tắt')+' | đổi cỡ '+rsz+' lần','WebGL2 '+(glOK?(gl.isContextLost()?'mất':'ok'):'tắt')+' | '+DG.res];ctx.font=Math.round(W/34)+'px system-ui';ctx.fillStyle='#0f0';T.forEach((t,i)=>ctx.fillText(t,W/60,H/20+i*W/26))}}
 function redraw(){if(lastSrc)render(lastSrc,lastRes,mode==='cam')}
 async function init(){const errs=[],M='https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 const BASES=['https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14','https://unpkg.com/@mediapipe/tasks-vision@0.10.14','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest'];
@@ -110,15 +111,18 @@ for(const B of BASES){let st='tải thư viện';try{const mp=await import(B+'/v
 const mk=d=>mp.FaceLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:M,delegate:d},runningMode:'IMAGE',numFaces:1,minFaceDetectionConfidence:.3,minFacePresenceConfidence:.3,minTrackingConfidence:.3});
 try{lm=await mk('GPU')}catch(e){lm=await mk('CPU')}msg.textContent='Sẵn sàng. Mở camera hoặc tải ảnh lên.';return}catch(e){errs.push(B.split('/')[2]+' (bước '+st+'): '+((e&&e.message)||e))}}
 msg.textContent='Không tải được công cụ nhận diện. Chi tiết lỗi: '+errs.join(' | ')}
-function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('cam').textContent='Mở camera';mode='img'}
+function stopCam(){loopId++;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}$('cam').textContent='Mở camera';mode='img'}
 const pc=document.createElement('canvas');pc.width=pc.height=64;const pcx=pc.getContext('2d');
+let VW=0,VH=0,rsz=0,loopId=0;const live=new Set();
+function syncSize(){const w=vd.videoWidth,h=vd.videoHeight;if(!w||!h||(w===VW&&h===VH))return;VW=w;VH=h;rsz++;const k=Math.min(1,1920/Math.max(w,h));cv.width=Math.round(w*k);cv.height=Math.round(h*k);dc.width=640;dc.height=Math.round(640*h/w);HS[0]=HS[1]=null;ST.clear();good=null}
+function fitStage(){$('stage').style.setProperty('--ar',cv.width/cv.height)}
 const dc=document.createElement('canvas'),dx=dc.getContext('2d');
-function loop(){if(mode!=='cam'||!stream)return;if(vd.currentTime!==lt){lt=vd.currentTime;lastSrc=vd;dx.drawImage(vd,0,0,dc.width,dc.height);const now=performance.now();lastRes=lm.detectForVideo(dc,now);DG.ms=DG.ms*.9+(performance.now()-now)*.1;DG.n++;if(now-DG.t>1000){DG.fps=DG.n*1000/(now-DG.t);DG.n=0;DG.t=now}if(lastRes.faceLandmarks.length){lastRes={faceLandmarks:[smooth(lastRes.faceLandmarks[0],now,cv.width,cv.height)]};good=lastRes;goodT=now}else if(good&&now-goodT<250)lastRes=good;render(vd,lastRes,true)}vd.requestVideoFrameCallback?vd.requestVideoFrameCallback(loop):requestAnimationFrame(loop)}
+function loop(id){if(id!==loopId||mode!=='cam'||!stream){live.delete(id);return}live.add(id);syncSize();if(vd.currentTime!==lt){lt=vd.currentTime;DG.cn++;{const tn=performance.now();if(tn-DG.ct>1000){DG.cfps=DG.cn*1000/(tn-DG.ct);DG.cn=0;DG.ct=tn}}lastSrc=vd;dx.drawImage(vd,0,0,dc.width,dc.height);const now=performance.now();lastRes=lm.detectForVideo(dc,now);DG.ms=DG.ms*.9+(performance.now()-now)*.1;DG.n++;if(now-DG.t>1000){DG.fps=DG.n*1000/(now-DG.t);DG.n=0;DG.t=now}if(lastRes.faceLandmarks.length){lastRes={faceLandmarks:[smooth(lastRes.faceLandmarks[0],now,cv.width,cv.height)]};good=lastRes;goodT=now}else if(good&&now-goodT<250)lastRes=good;render(vd,lastRes,true)}vd.requestVideoFrameCallback?vd.requestVideoFrameCallback(()=>loop(id)):requestAnimationFrame(()=>loop(id))}
 $('cam').onclick=async()=>{if(stream){stopCam();return}if(!lm){msg.textContent='Công cụ nhận diện chưa sẵn sàng.';return}
 msg.textContent='Đang khởi động camera…';try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:false});vd.srcObject=stream;await vd.play();{const ts=stream.getVideoTracks()[0].getSettings();DG.res=vd.videoWidth+'x'+vd.videoHeight+' (cảm biến '+ts.width+'x'+ts.height+')'}await lm.setOptions({runningMode:'VIDEO'});
-const k=Math.min(1,1920/Math.max(vd.videoWidth,vd.videoHeight));cv.width=Math.round(vd.videoWidth*k);cv.height=Math.round(vd.videoHeight*k);dc.width=640;dc.height=Math.round(640*vd.videoHeight/vd.videoWidth);mode='cam';$('cam').textContent='Tắt camera';msg.textContent='';loop()}catch(e){stopCam();msg.textContent='Không mở được camera (cần cho phép camera và chạy qua https).'}};
+VW=0;syncSize();fitStage();mode='cam';$('cam').textContent='Tắt camera';msg.textContent='';loopId++;loop(loopId)}catch(e){stopCam();msg.textContent='Không mở được camera (cần cho phép camera và chạy qua https).'}};
 $('fi').onchange=e=>{const f=e.target.files[0];if(!f)return;if(!lm){msg.textContent='Công cụ nhận diện chưa sẵn sàng.';return}stopCam();const im=new Image();
-im.onload=async()=>{const k=Math.min(1,1920/Math.max(im.width,im.height));cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);await lm.setOptions({runningMode:'IMAGE'});HS[0]=HS[1]=null;ST.clear();lastSrc=im;lastRes=lm.detect(im);
+im.onload=async()=>{const k=Math.min(1,1920/Math.max(im.width,im.height));cv.width=Math.round(im.width*k);cv.height=Math.round(im.height*k);fitStage();await lm.setOptions({runningMode:'IMAGE'});HS[0]=HS[1]=null;ST.clear();lastSrc=im;lastRes=lm.detect(im);
 msg.textContent=lastRes.faceLandmarks.length?'':'Không thấy khuôn mặt. Hãy dùng ảnh chính diện, rõ mắt.';redraw()};im.src=URL.createObjectURL(f)};
 P.forEach((p,i)=>{const b=document.createElement('button');b.className='sw'+(i?'':' on');b.style.background=p.c;b.onclick=()=>{cur=p;[...$('cols').children].forEach(x=>x.classList.remove('on'));b.classList.add('on');build()};$('cols').appendChild(b)});
 $('al').oninput=e=>{alpha=e.target.value/100;redraw()};
