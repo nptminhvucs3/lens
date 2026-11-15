@@ -85,9 +85,9 @@ let rawMode=false,skipT=0;const nd={on:true,a:null,b:null,tx:null,mk:document.cr
 function denoise(s,W,H){const t0=performance.now();
 if(!nd.a||nd.a.width!==W||nd.a.height!==H){nd.a=document.createElement('canvas');nd.b=document.createElement('canvas');nd.tx=document.createElement('canvas');nd.a.width=nd.b.width=nd.tx.width=W;nd.a.height=nd.b.height=nd.tx.height=H;const sw=64,sh=Math.round(64*H/W);nd.sm.width=nd.mk.width=sw;nd.sm.height=nd.mk.height=sh;nd.pv=null}
 const sw=nd.sm.width,sh=nd.sm.height,sx=nd.sm.getContext('2d'),mx=nd.mk.getContext('2d');sx.drawImage(dc,0,0,sw,sh);const d=sx.getImageData(0,0,sw,sh).data,m=mx.createImageData(sw,sh),o=m.data,first=!nd.pv;if(first)nd.pv=new Float32Array(sw*sh);
-for(let i=0;i<d.length;i+=4){const l=.3*d[i]+.59*d[i+1]+.11*d[i+2],k=i>>2,df=first?99:Math.abs(l-nd.pv[k]);nd.pv[k]=l;o[i]=o[i+1]=o[i+2]=255;o[i+3]=Math.max(0,1-df/10)*.6*255}
+for(let i=0;i<d.length;i+=4){const l=.3*d[i]+.59*d[i+1]+.11*d[i+2],k=i>>2,df=first?99:Math.abs(l-nd.pv[k]);nd.pv[k]=l;o[i]=o[i+1]=o[i+2]=255;o[i+3]=Math.max(0,1-df/12)*.8*255}
 mx.putImageData(m,0,0);const tx=nd.tx.getContext('2d');tx.globalCompositeOperation='source-over';tx.clearRect(0,0,W,H);tx.drawImage(nd.a,0,0);tx.globalCompositeOperation='destination-in';tx.drawImage(nd.mk,0,0,W,H);
-const bx=nd.b.getContext('2d');bx.globalCompositeOperation='source-over';bx.drawImage(s,0,0,W,H);bx.drawImage(nd.tx,0,0);[nd.a,nd.b]=[nd.b,nd.a];nd.ms=nd.ms*.9+(performance.now()-t0)*.1;return nd.a}
+const bx=nd.b.getContext('2d');bx.globalCompositeOperation='source-over';bx.drawImage(s,0,0,W,H);bx.drawImage(nd.tx,0,0);[nd.a,nd.b]=[nd.b,nd.a];nd.ms=nd.ms*.9+(performance.now()-t0)*.1;nd.n=(nd.n||0)+1;if(nd.n>40&&nd.ms>22){nd.on=false;const c=document.getElementById('denOn');if(c)c.checked=false;msg.textContent='Giảm nhiễu quá nặng cho máy này nên đã tự tắt.'}return nd.a}
 let showDbg=false,lastOK=null;
 function render(s,res,mirror){const W=cv.width,H=cv.height;if(s===vd&&nd.on&&!rawMode)try{s=denoise(s,W,H)}catch(x){nd.on=false;msg.textContent='Lỗi giảm nhiễu: '+x.message}ctx.save();ctx.clearRect(0,0,W,H);if(mirror){ctx.translate(W,0);ctx.scale(-1,1)}
 ctx.drawImage(s,0,0,W,H);const f=rawMode?null:res&&res.faceLandmarks&&res.faceLandmarks[0];if(f&&bOn&&f.length>=468)try{beauty(s,f,W,H)}catch(x){bOn=false;msg.textContent='Lỗi làm đẹp: '+x.message}
