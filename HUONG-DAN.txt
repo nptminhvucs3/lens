@@ -1,0 +1,9 @@
+TEST TRÊN GITHUB PAGES
+1. Tạo repo GitHub, tải toàn bộ nội dung thư mục này lên (index.html phải nằm ở gốc repo).
+2. Settings > Pages > Source: Deploy from a branch > nhánh main, thư mục /(root).
+3. Mở https://<tên>.github.io/<repo>/ bằng điện thoại, bấm "Bật camera".
+THÊM LENS CỦA BẠN
+- Bỏ ảnh PNG texture (vuông, nền trong suốt, giữa trống) vào thư mục lens/.
+- Sửa products.json: texture/swatch = đường dẫn ảnh, url = link trang sản phẩm, name, price, specs...
+- Các lens "Mẫu thử" là ảnh vẽ tự động (không phải ảnh lens thật, chỉ để thử kỹ thuật) chỉ để thử kỹ thuật, hãy xóa khi dùng thật.
+TEST TRÊN MÁY: trong thư mục này chạy  python3 -m http.server 8000  rồi mở http://localhost:8000

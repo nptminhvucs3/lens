@@ -1,0 +1,109 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Mẫu thử Navy",
+      "image": "",
+      "swatch": "lens/lens_navy.png",
+      "texture": "lens/lens_navy.png",
+      "price": "",
+      "priceRegular": "",
+      "url": "#",
+      "color": "blue",
+      "style": "natural",
+      "dilation": "slight",
+      "border": "with",
+      "usage": "daily",
+      "specs": {
+        "dia": "14.2",
+        "gdia": "13.0",
+        "bc": "8.6"
+      },
+      "gdiaNum": 13.0,
+      "notes": "",
+      "render": {}
+    },
+    {
+      "id": 2,
+      "name": "Mẫu thử Brown",
+      "image": "",
+      "swatch": "lens/lens_brown.png",
+      "texture": "lens/lens_brown.png",
+      "price": "",
+      "priceRegular": "",
+      "url": "#",
+      "color": "brown",
+      "style": "natural",
+      "dilation": "none",
+      "border": "with",
+      "usage": "daily",
+      "specs": {
+        "dia": "14.0",
+        "gdia": "12.8"
+      },
+      "gdiaNum": 12.8,
+      "notes": "",
+      "render": {}
+    },
+    {
+      "id": 3,
+      "name": "Mẫu thử Hazel",
+      "image": "",
+      "swatch": "lens/lens_hazel.png",
+      "texture": "lens/lens_hazel.png",
+      "price": "",
+      "priceRegular": "",
+      "url": "#",
+      "color": "brown",
+      "style": "sweet",
+      "dilation": "slight",
+      "border": "with",
+      "usage": "daily",
+      "specs": {},
+      "gdiaNum": 0,
+      "notes": "",
+      "render": {}
+    },
+    {
+      "id": 4,
+      "name": "Mẫu thử Gray",
+      "image": "",
+      "swatch": "lens/lens_gray.png",
+      "texture": "lens/lens_gray.png",
+      "price": "",
+      "priceRegular": "",
+      "url": "#",
+      "color": "gray",
+      "style": "glam",
+      "dilation": "clear",
+      "border": "without",
+      "usage": "makeup",
+      "specs": {
+        "dia": "14.5",
+        "gdia": "14.2"
+      },
+      "gdiaNum": 14.2,
+      "notes": "",
+      "render": {}
+    },
+    {
+      "id": 5,
+      "name": "Mẫu thử Green",
+      "image": "",
+      "swatch": "lens/lens_green.png",
+      "texture": "lens/lens_green.png",
+      "price": "",
+      "priceRegular": "",
+      "url": "#",
+      "color": "green",
+      "style": "western",
+      "dilation": "clear",
+      "border": "with",
+      "usage": "makeup",
+      "specs": {},
+      "gdiaNum": 0,
+      "notes": "",
+      "render": {}
+    }
+  ]
+}
